@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class PuzzleGen {
@@ -36,10 +37,11 @@ public class PuzzleGen {
         { "1st and 2nd", 59 },{ "1st and 3rd", 60 },{ "2nd and 3rd", 61 },
         { "2nd + 3rd, 1st + 3rd, 1st + 2nd", 62},
         { "|2nd - 3rd|, |1st - 3rd|, |1st - 2nd|", 63},
-        { "3rd, 2nd, 1st", 64}
+        { "3rd, 2nd, 1st", 64},
+        { "2, 3, 4, 5", 65}
     };
-
     private List<Clue> clues;
+    private List<Clue> simpleClues;
     private List<Clue> hardClues;
     private List<Clue> specialClues;
     private int[] solution;
@@ -47,20 +49,23 @@ public class PuzzleGen {
     public PuzzleGen(Material blankMat, Material[] clueMats)
     {
         solution = new int[3];
+        for (int i = 0; i < 3; i++)
+            solution[i] = UnityEngine.Random.Range(0, 5) + 1;
+        //solution = new int[] { 3, 5, 3 };
         numClues = Random.Range(0, 3) + 4;
         generatePuzzle(blankMat, clueMats);
     }
     public void generatePuzzle(Material blankMat, Material[] clueMats)
     {
         clues = new List<Clue>();
+        simpleClues = new List<Clue>();
         specialClues = new List<Clue>();
         hardClues = new List<Clue>();
-        for (int i = 0; i < 3; i++)
-            solution[i] = UnityEngine.Random.Range(0, 5) + 1;
-        //solution = new int[] { 3, 5, 3 };
+        
         generateAllClues();
 
         setClueMats(blankMat, clueMats, clues);
+        setClueMats(blankMat, clueMats, simpleClues);
         setClueMats(blankMat, clueMats, specialClues);
         setClueMats(blankMat, clueMats, hardClues);
 
@@ -69,6 +74,11 @@ public class PuzzleGen {
         {
             if (clues[i].getClueIndex() == -1)
                 clues.RemoveAt(i--);
+        }
+        for (int i = 0; i < simpleClues.Count; i++)
+        {
+            if (simpleClues[i].getClueIndex() == -1)
+                simpleClues.RemoveAt(i--);
         }
         for (int i = 0; i < hardClues.Count; i++)
         {
@@ -81,14 +91,12 @@ public class PuzzleGen {
                 specialClues.RemoveAt(i--);
         }
 
-        List<Clue> selected = selectClues();
-        removeClues(selected);
-        bool valid = checker(selected);
-        while (!(valid))
+        List<Clue> selected = selectCluesUpgrade();
+        //removeClues(selected);
+        //bool valid = checker(selected);
+        while (selected == null)
         {
-            selected = selectClues();
-            removeClues(selected);
-            valid = checker(selected);
+            selected = selectCluesUpgrade();
         }
         clues = selected;
         setSolutionMats(blankMat, clueMats, clues);
@@ -128,40 +136,40 @@ public class PuzzleGen {
             for(int j = 1; j <= 5; j++)
             {
                 if (j == 1)
-                    clues.Add(new Clue(new string[] { pos1[i] }, new string[] { "=", ">" }, new string[] { j + "" }, solution));
+                    simpleClues.Add(new Clue(new string[] { pos1[i] }, new string[] { "=", ">" }, new string[] { j + "" }, solution));
                 else if (j == 5)
-                    clues.Add(new Clue(new string[] { pos1[i] }, new string[] { "<", "=" }, new string[] { j + "" }, solution));
+                    simpleClues.Add(new Clue(new string[] { pos1[i] }, new string[] { "<", "=" }, new string[] { j + "" }, solution));
                 else
-                    clues.Add(new Clue(new string[] { pos1[i] }, new string[] { "<", "=", ">" }, new string[] { j + "" }, solution));
+                    simpleClues.Add(new Clue(new string[] { pos1[i] }, new string[] { "<", "=", ">" }, new string[] { j + "" }, solution));
             }
         }
         // Position Divisible by 2
         for (int i = 0; i < 3; i++)
-            clues.Add(new Clue(new string[] { pos1[i] }, new string[] { "/", "!/" }, new string[] { "2" }, solution));
+            simpleClues.Add(new Clue(new string[] { pos1[i] }, new string[] { "/", "!/" }, new string[] { "2" }, solution));
         // Position Compares Position
         for (int i = 0; i < 3; i++)
         {
             for (int j = 0; j < 3; j++)
             {
                 if(j != i)
-                    clues.Add(new Clue(new string[] { pos1[i] }, new string[] { "<", "=", ">" }, new string[] { pos1[j] }, solution));
+                    simpleClues.Add(new Clue(new string[] { pos1[i] }, new string[] { "<", "=", ">" }, new string[] { pos1[j] }, solution));
             }
         }
         // 2 Position Compares Number
         string[] pos2 = { "1st and 2nd", "1st and 3rd", "2nd and 3rd" };
         for(int i = 0; i < 3; i++)
         {
-            clues.Add(new Clue(new string[] { pos2[i] }, new string[] { "=", ">" }, new string[] { "1" }, solution));
+            simpleClues.Add(new Clue(new string[] { pos2[i] }, new string[] { "=", ">" }, new string[] { "1" }, solution));
             for (int j = 2; j <= 4; j++)
-                clues.Add(new Clue(new string[] { pos2[i] }, new string[] { "<", "=", ">" }, new string[] { j + "" }, solution));
-            clues.Add(new Clue(new string[] { pos2[i] }, new string[] { "<", "=" }, new string[] { "5" }, solution));
+                simpleClues.Add(new Clue(new string[] { pos2[i] }, new string[] { "<", "=", ">" }, new string[] { j + "" }, solution));
+            simpleClues.Add(new Clue(new string[] { pos2[i] }, new string[] { "<", "=" }, new string[] { "5" }, solution));
         }
         // 2 Position Divisible by 2
         foreach(string pos in pos2)
-            clues.Add(new Clue(new string[] { pos }, new string[] { "/", "!/" }, new string[] { "2" }, solution));
+            simpleClues.Add(new Clue(new string[] { pos }, new string[] { "/", "!/" }, new string[] { "2" }, solution));
         // Position Compares 2 Positions
         for (int i = 0; i < 3; i++)
-            clues.Add(new Clue(new string[] { pos1[i] }, new string[] { "<", ">" }, new string[] { pos2[2 - i] }, solution));
+            simpleClues.Add(new Clue(new string[] { pos1[i] }, new string[] { "<", ">" }, new string[] { pos2[2 - i] }, solution));
         // 2 Sum Compares Number
         string[] sum2 = { "1st + 2nd", "1st + 3rd", "2nd + 3rd" };
         for (int i = 0; i < 3; i++)
@@ -222,10 +230,11 @@ public class PuzzleGen {
             else
                 clues.Add(new Clue(new string[] { "1st + 2nd + 3rd" }, new string[] { "<", "=", ">" }, new string[] { i + "" }, solution));
         }
-        // 3 Sum Divisible by 2
+        // 3 Sum Divisible by number
         clues.Add(new Clue(new string[] { "1st + 2nd + 3rd" }, new string[] { "/", "!/" }, new string[] { "2" }, solution));
-        clues.Add(new Clue(new string[] { "1st + 2nd + 3rd" }, new string[] { "/", "!/" }, new string[] { "2" }, solution));
-        clues.Add(new Clue(new string[] { "1st + 2nd + 3rd" }, new string[] { "/", "!/" }, new string[] { "2" }, solution));
+        clues.Add(new Clue(new string[] { "1st + 2nd + 3rd" }, new string[] { "/", "!/" }, new string[] { "3" }, solution));
+        clues.Add(new Clue(new string[] { "1st + 2nd + 3rd" }, new string[] { "/", "!/" }, new string[] { "4" }, solution));
+        clues.Add(new Clue(new string[] { "1st + 2nd + 3rd" }, new string[] { "/", "!/" }, new string[] { "5" }, solution));
         // 3 Sum Divisible by Position
         foreach (string pos in pos1)
             clues.Add(new Clue(new string[] { "1st + 2nd + 3rd" }, new string[] { "/", "!/" }, new string[] { pos }, solution));
@@ -240,9 +249,7 @@ public class PuzzleGen {
             specialClues.Add(new Clue(new string[] { orders[i] }, new string[] { "=" }, new string[] { "0", "1" }, solution));
         //Consecutive Numbers
         specialClues.Add(new Clue(new string[] { "Consecutive Pairs" }, new string[] { "=" }, new string[] { "0", "1", "2" }, solution));
-        specialClues.Add(new Clue(new string[] { "Consecutive Pairs" }, new string[] { "=" }, new string[] { "0", "1", "2" }, solution));
         //Distinct Numbers
-        specialClues.Add(new Clue(new string[] { "Distinct Numbers" }, new string[] { "=" }, new string[] { "1", "2", "3" }, solution));
         specialClues.Add(new Clue(new string[] { "Distinct Numbers" }, new string[] { "=" }, new string[] { "1", "2", "3" }, solution));
         // Largest/Smallest
         specialClues.Add(new Clue(pos1, new string[] { ">" }, new string[] { pos2[2], pos2[1], pos2[0] }, solution));
@@ -344,8 +351,8 @@ public class PuzzleGen {
             hardClues.Add(new Clue(pos1, new string[] { ">" }, new string[] { dif }, solution));
 
         //3 Sum Divisible by Numbers
-        hardClues.Add(new Clue(new string[] { "1st + 2nd + 3rd" }, new string[] { "/" }, new string[] { "3", "4", "5" }, solution));
-        hardClues.Add(new Clue(new string[] { "1st + 2nd + 3rd" }, new string[] { "!/" }, new string[] { "3", "4", "5" }, solution));
+        hardClues.Add(new Clue(new string[] { "1st + 2nd + 3rd" }, new string[] { "/" }, new string[] { "2", "3", "4", "5" }, solution));
+        hardClues.Add(new Clue(new string[] { "1st + 2nd + 3rd" }, new string[] { "!/" }, new string[] { "2", "3", "4", "5" }, solution));
         //3 Sum Divisible by Positions
         hardClues.Add(new Clue(new string[] { "1st + 2nd + 3rd" }, new string[] { "/" }, pos1, solution));
         hardClues.Add(new Clue(new string[] { "1st + 2nd + 3rd" }, new string[] { "!/" }, pos1, solution));
@@ -353,7 +360,7 @@ public class PuzzleGen {
     }
 
     // Shuffles the clues and selects the clues until the amount of possible digits is 1
-    private List<Clue> selectClues()
+    private List<Clue> selectCluesZ()
     {
         for (int i = 0; i < 3; i++)
         {
@@ -362,6 +369,7 @@ public class PuzzleGen {
             specialClues.Shuffle();
         }
         List<Clue> possClues = new List<Clue>();
+        possClues.AddRange(clues);
         possClues.AddRange(clues);
         for (int i = 0; i < 6; i++)
         {
@@ -399,6 +407,74 @@ public class PuzzleGen {
         for (int i = 0; i < index; i++)
             selectedClues.Add(possClues[i]);
         return selectedClues;
+    }
+    private List<Clue> selectCluesUpgrade()
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            clues.Shuffle();
+            hardClues.Shuffle();
+            specialClues.Shuffle();
+        }
+        int allClueCount = numClues - 4;
+        foreach (Clue hardClue in hardClues)
+        {
+            foreach (Clue specialClue in specialClues)
+            {
+                foreach(Clue simpleClue in simpleClues)
+                {
+                    List<Clue> allClues = new List<Clue>();
+                    allClues.AddRange(hardClues);
+                    allClues.AddRange(specialClues);
+                    allClues.AddRange(simpleClues);
+                    allClues.AddRange(clues);
+                    allClues.Remove(hardClue);
+                    allClues.Remove(specialClue);
+                    allClues.Remove(simpleClue);
+                    allClues.Shuffle();
+                    allClues.Shuffle();
+                    allClues.Shuffle();
+                    for (int i = 0; i < allClues.Count - allClueCount; i++)
+                    {
+                        List<Clue> selectedClues = new List<Clue>();
+                        for (int j = 0; j <= allClueCount; j++)
+                            selectedClues.Add(allClues[i + j]);
+                        selectedClues.Add(hardClue);
+                        selectedClues.Add(specialClue);
+                        selectedClues.Add(simpleClue);
+                        bool flag = true;
+                        for (int a = 1; a <= 5; a++)
+                        {
+                            for (int b = 1; b <= 5; b++)
+                            {
+                                for (int c = 1; c <= 5; c++)
+                                {
+                                    bool test = selectedClues[0].test(new int[] { a, b, c });
+                                    for (int clueIndex = 1; test && clueIndex < selectedClues.Count; clueIndex++)
+                                        test = test && selectedClues[clueIndex].test(new int[] { a, b, c });
+                                    if (test && (a != solution[0] || b != solution[1] || c != solution[2]))
+                                    {
+                                        flag = false;
+                                        break;
+                                    }
+                                }
+                                if (!flag)
+                                    break;
+                            }
+                            if (!flag)
+                                break;
+                        }
+                        if (flag)
+                        {
+                            removeClues(selectedClues);
+                            if (selectedClues.Count == numClues)
+                                return selectedClues;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
     }
     // Removes unneeded clues
     private void removeClues(List<Clue> selected)
